@@ -54,7 +54,7 @@ def collect_admin_info():
   '''
 
   if DEBUG:
-    ip_addr = '10.93.130.125'
+    ip_addr = ''
     user = ''
     password = ''
   else:
