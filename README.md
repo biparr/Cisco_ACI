@@ -6,6 +6,7 @@ Scripts for Cisco ACI
 Various scripts written in python for use with Cisco ACI (Application Centric Infastructure).
 
 create_full_tenant.py
+
 ''' create_full_tenant.py
     The goal of this application is to create a new Tenant and associated Security Domain.
     It then creates a local user with full admin access to that Tenant.
@@ -22,7 +23,7 @@ create_full_tenant.py
     7.  Create the new user and place them in the proper security group
     *.  Display information back to the user (some day)
     
-    Application created by Tige Phillips.  Please feel free to use as you see fit.
+    Application created by Tige Phillips.  
     Please note that very little error checking is being done.  It's entirely possible 
     that my code could crash your system (not likely).  You have been warned!
 '''
