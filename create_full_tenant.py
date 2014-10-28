@@ -2,7 +2,7 @@
 import requests, json, sys, getpass
 
 
-''' create_all_tenant.py
+''' create_full_tenant.py
     The goal of this application is to create a new Tenant and associated Security Domain.
     It then creates a local user with full admin access to that Tenant.
     I have also put some pauses in the script so that you could use it to show a customer
