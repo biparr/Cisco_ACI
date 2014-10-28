@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 import requests, json, sys, getpass
 
-version = 1.0
 
-''' create_full_tenant.py
+''' create_all_tenant.py
     The goal of this application is to create a new Tenant and associated Security Domain.
     It then creates a local user with full admin access to that Tenant.
     I have also put some pauses in the script so that you could use it to show a customer
@@ -24,14 +23,27 @@ version = 1.0
     that my code could crash your system (not likely).  You have been warned!
 '''
 
+''' Version 1.5 changes
+    1. Fixed the permissions of the users so they now have full read/write access to their tenant
+    2. Added a list (users) that can be used to populate any number of users/tenants automatically (tenant, username, and password are all the same)
+    3. Added "123" to a password if it's not 8 characters
+'''
+
 ''' debug is used to hard code the IP address, admin username, and password.
     It also skips the press a key to continue (this is used for demonstration 
     purposes so you could walk a customer though the creation of all items.
 '''
+
+version = 1.5
+admin = {}
+
+# Populate the following list with userids and set DEBUG and CREATE_ALL to True
+users = ['example','testing']
 DEBUG = False
+CREATE_ALL = False
 
 def error_message(error):
-    '''  Calles and error message.  This takes 1 list argument with 3 components.  #1 is the error number, #2 is the error text, 
+    '''  Calls and error message.  This takes 1 list argument with 3 components.  #1 is the error number, #2 is the error text, 
          #3 is if the application should continue or not.  Use -1 to kill the application.  Any other number
          continues the application.  You must code in a loop and go back to where you want.
     '''
@@ -203,19 +215,23 @@ def create_user(admin,tenant,user):
   
   #  user_role is used as a var in payload.  Check the second ot last line
   #  I create the large block of json code here, the use it later.
+  user_role = ''
   loopnum = 1
   for role in roles:
-    user_role = '{"aaaUserRole": {"attributes":'
-    user_role += '{"dn": "uni/userext/user-' + new_user + '/userdomain-' + new_tenant + '/role-' + role + '",'
+    user_role += '{"aaaUserRole": {"attributes":{'
+    user_role += '"dn": "uni/userext/user-' + new_user + '/userdomain-' + new_tenant + '/role-' + role + '",'
     user_role += '"name": "' + role + '",'
     user_role += '"privType" : "writePriv",'
     user_role += '"rn": "role-' + role + '",'
     user_role += '"status": "created,modified",'
     user_role += '},"children": []}}'
-    if len(roles) != loopnum:
+    if len(roles) != (loopnum - 1):
       user_role += ','
     loopnum += 1
  
+  if len(new_user) < 8:
+    new_pass += '123'
+    
   payload = '{"aaaUser": {"attributes":'
   payload += '{"name": "' + new_user + '",'
   payload += '"pwd": "' + new_pass + '",'
@@ -231,7 +247,6 @@ def create_user(admin,tenant,user):
   payload += '"children": [' + user_role + ']}}'
   payload += ']}}'
   
-
   try:
     result = requests.post(url, data=payload, headers=headers, cookies=cookie, verify=False)
   except requests.exceptions.RequestException as error:   
@@ -243,7 +258,20 @@ def create_user(admin,tenant,user):
     error_message ([decoded_json['imdata'][0]['error']['attributes']['code'], decoded_json['imdata'][0]['error']['attributes']['text'], -1])
 
   return
+  
+def auto_create():
+  for name in users:
+    new_tenant = {"name":name,"description":name}
+    create_security_domain(admin,new_tenant)
+    create_tenant(admin,new_tenant)
+    new_user = {"name":name,"description":'AutoCreation',"password":name}
+    create_user(admin,new_tenant,new_user)
+    print 'User created: ' + name
+
+  
+  
 def main():
+  global admin
   '''  No arguments are used for the program.  This could be modified to take the required 
       input on the command line.  The benefit to this would be bulk creation from another script.
       Right now, it's human driven.
@@ -253,28 +281,32 @@ def main():
   add_admin = login(admin)
   ''' Add the session urlToken for future use with security, and the refresh timeout for future use '''
   admin.update({'urlToken':add_admin[0],'refreshTimeoutSeconds':add_admin[1], 'APIC-cookie':add_admin[2]})
+#   print admin
   print 'Login Accepted\n'
   if not DEBUG:
     junk = raw_input('Press Enter when ready to continue.')
 
-  new_tenant = collect_tenant()
-  create_security_domain(admin,new_tenant)
-  print 'Security Domain successfully created...'
-  if not DEBUG:
-    junk = raw_input('Press Enter when ready to continue.')
+  if CREATE_ALL and DEBUG:
+    auto_create()
+  else:
+    new_tenant = collect_tenant()
+    create_security_domain(admin,new_tenant)
+    print 'Security Domain successfully created...'
+    if not DEBUG:
+      junk = raw_input('Press Enter when ready to continue.')
   
-  create_tenant(admin,new_tenant)
-  print 'Tenant successfully created...'
-  if not DEBUG:
-    junk = raw_input('Press Enter when ready to continue.')
+    create_tenant(admin,new_tenant)
+    print 'Tenant successfully created...'
+    if not DEBUG:
+      junk = raw_input('Press Enter when ready to continue.')
 
-  new_user = collect_user()
-  create_user(admin,new_tenant,new_user)
-  print 'New user successfully created...'
+    new_user = collect_user()
+    create_user(admin,new_tenant,new_user)
+    print 'New user successfully created...'
   
 #   End the application
   print '\n'
-  print 'Were done!'
+  print "We're done!"
 
 
 if __name__ == '__main__':
